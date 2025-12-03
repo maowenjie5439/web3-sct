@@ -1,6 +1,9 @@
-import { ethers } from "hardhat";
+import { network } from "hardhat";
 
 const main = async () => {
+    // 0. 连接到默认网络并获取 ethers 插件
+    const { ethers } = await network.connect();
+
     // 1. 创建合约工厂
     // "FundMe" 必须和你的合约名字完全一致 (Contracts/FundMe.sol 中的 contract FundMe)
     const fundMeFactory = await ethers.getContractFactory("FundMe");
