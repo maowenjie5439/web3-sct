@@ -1,7 +1,36 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+// [dotenv@17.2.3] injecting env (5) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+// Sources flattened with hardhat v3.0.15 https://hardhat.org
 
+// SPDX-License-Identifier: MIT
+
+// File npm/@chainlink/contracts@1.5.0/src/v0.8/shared/interfaces/AggregatorV3Interface.sol
+
+// Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.0;
+
+// solhint-disable-next-line interface-starts-with-i
+interface AggregatorV3Interface {
+  function decimals() external view returns (uint8);
+
+  function description() external view returns (string memory);
+
+  function version() external view returns (uint256);
+
+  function getRoundData(
+    uint80 _roundId
+  ) external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+
+  function latestRoundData()
+    external
+    view
+    returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+}
+
+
+// File contracts/FundMe.sol
+
+// Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.20;
 // 1. 创建一个收款函数
 // 2. 记录投资人并且查看
 // 3. 锁定期内达到目标值，可以提款
@@ -114,3 +143,4 @@ contract FundMe{
         return ethAmt * uint256(getChainlinkDataFeedLatestAnswer()) / 10 ** 8;
     }
 }
+
