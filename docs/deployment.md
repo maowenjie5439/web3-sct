@@ -21,13 +21,39 @@
 
 ## 部署命令
 
-### 本地 Hardhat 网络
+### 方式一：使用 Hardhat Ignition（推荐）
+
+Hardhat 3 官方推荐使用 Ignition 模块进行部署，支持声明式配置和更好的状态管理。
+
+#### 本地 Hardhat 网络
+```bash
+npx hardhat ignition deploy ignition/modules/FundMe.ts
+```
+
+#### Sepolia 测试网
+```bash
+npx hardhat ignition deploy ignition/modules/FundMe.ts --network sepolia
+```
+
+#### Conflux eSpace 测试网
+```bash
+npx hardhat ignition deploy ignition/modules/FundMe.ts --network confluxESpace
+```
+
+#### 自定义构造函数参数
+```bash
+npx hardhat ignition deploy ignition/modules/FundMe.ts --network sepolia --parameters '{"FundMeModule":{"initialTarget":200}}'
+```
+
+### 方式二：使用传统部署脚本
+
+#### 本地 Hardhat 网络
 ```bash
 npx hardhat run scripts/deployFuneMe.ts
 ```
 > 只运行在内存链上，进程结束部署即消失。
 
-### Sepolia 测试网
+#### Sepolia 测试网
 ```bash
 npx hardhat run scripts/deployFuneMe.ts --network sepolia
 ```

@@ -1,0 +1,44 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_20-0b9d22f870e58d6d34b852a10f178ce7fe3295aa",
+  "solcVersion": "0.8.20",
+  "solcLongVersion": "0.8.20+commit.a1b79de6",
+  "userSourceNameMap": {
+    "contracts/FundMe.sol": "project/contracts/FundMe.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": [
+        "project/:@chainlink/contracts/=npm/@chainlink/contracts@1.5.0/"
+      ]
+    },
+    "sources": {
+      "npm/@chainlink/contracts@1.5.0/src/v0.8/shared/interfaces/AggregatorV3Interface.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\n// solhint-disable-next-line interface-starts-with-i\ninterface AggregatorV3Interface {\n  function decimals() external view returns (uint8);\n\n  function description() external view returns (string memory);\n\n  function version() external view returns (uint256);\n\n  function getRoundData(\n    uint80 _roundId\n  ) external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);\n\n  function latestRoundData()\n    external\n    view\n    returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);\n}\n"
+      },
+      "project/contracts/FundMe.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\nimport {AggregatorV3Interface} from \"@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol\";\r\n\r\n// 1. 创建一个收款函数\r\n// 2. 记录投资人并且查看\r\n// 3. 锁定期内达到目标值，可以提款\r\n// 4. 没有达到目标值，在锁定期结束后退款\r\n\r\ncontract FundMe{\r\n    AggregatorV3Interface internal dataFeed;\r\n\r\n    mapping(address => uint256) public acctBals;\r\n\r\n    // 单笔fund最小值 (0.01 CFX)\r\n    uint256 SINGLE_MININUM_VALUE = 0.01 * 10 ** 18;\r\n\r\n    // 提现最小余额 (0.1 CFX)\r\n    uint256 WITHDRAW_MININUM_BALANCE = 0.1 * 10 ** 18;\r\n\r\n    address public owner;\r\n\r\n    // 合约部署时间\r\n    uint256 immutable private deployTime;\r\n    // 锁定期时长\r\n    uint256 immutable private lockDuration;\r\n\r\n    bool public isFundSuccess = false;\r\n\r\n    address private erc20Addr;\r\n    \r\n\r\n    constructor(uint256 duration){\r\n        // dataFeed = AggregatorV3Interface(0x5147eA642CAEF7BD9c1265AadcA78f997AbB9649);\r\n        owner = msg.sender;\r\n        deployTime = block.timestamp;\r\n        lockDuration = duration;\r\n    }\r\n\r\n    // 投资\r\n    function fund() external payable{\r\n        // 单次投资金额不能小于最小值\r\n        require(msg.value >= SINGLE_MININUM_VALUE, \"Funding amount too small\");\r\n        require(block.timestamp < deployTime + lockDuration, unicode\"锁定期已经结束，无法充值\");\r\n        acctBals[msg.sender] += msg.value;\r\n    }\r\n\r\n    // 提现\r\n    function withdrawl() external onlyOwner{\r\n        require(address(this).balance >= WITHDRAW_MININUM_BALANCE, \"Balance too low to withdraw\");\r\n\r\n        bool success;\r\n        (success, ) = payable(msg.sender).call{value: getBalance()}(\"\");\r\n\r\n        require(success, unicode\"提现失败\");\r\n        // 账户余额清空\r\n        acctBals[msg.sender] = 0;\r\n        // 众筹成功\r\n        isFundSuccess = true;\r\n    }\r\n\r\n    function getBalance() public view returns (uint256){\r\n        return address(this).balance;\r\n    }\r\n\r\n    function refund() external windowClosed{\r\n        require(address(this).balance < WITHDRAW_MININUM_BALANCE, unicode\"金额已经到达目标值\");\r\n        require(acctBals[msg.sender] > 0, unicode\"未查询到充值记录\");\r\n        bool success;\r\n        (success, ) = payable(msg.sender).call{value: acctBals[msg.sender]}(\"\");\r\n        require(success, unicode\"退款失败\");\r\n        acctBals[msg.sender] = 0;\r\n    }\r\n\r\n    /**\r\n     * \r\n     * @param funder 众筹者\r\n     * @param newAmt 目标金额\r\n     */\r\n    function setFundToAmt(address funder, uint256 newAmt) external {\r\n        require(msg.sender == erc20Addr, unicode\"您没有权限调用此函数\");\r\n        acctBals[funder] = newAmt;\r\n    }\r\n\r\n    function setErc20Addr(address _erc20Addr) public onlyOwner {\r\n        erc20Addr = _erc20Addr;\r\n    }\r\n\r\n    modifier onlyOwner(){\r\n        require(msg.sender == owner, unicode\"只有合约拥有者能提现\");\r\n        _;\r\n    }\r\n\r\n    modifier windowClosed(){\r\n        require(block.timestamp >= deployTime + lockDuration, unicode\"锁定期未结束，无法退款\");\r\n        _;\r\n    }\r\n\r\n    function getChainlinkDataFeedLatestAnswer() public view returns (int) {\r\n        // prettier-ignore\r\n        (\r\n            /* uint80 roundID */,\r\n            int answer,\r\n            /*uint startedAt*/,\r\n            /*uint timeStamp*/,\r\n            /*uint80 answeredInRound*/\r\n        ) = dataFeed.latestRoundData();\r\n        return answer;\r\n    }\r\n\r\n    // eth单位wei\r\n    // getChainlinkDataFeedLatestAnswer单位ETH/USD\r\n    function convertEthToUsd(uint256 ethAmt) internal view returns (uint256){\r\n        return ethAmt * uint256(getChainlinkDataFeedLatestAnswer()) / 10 ** 8;\r\n    }\r\n}"
+      }
+    }
+  }
+}
