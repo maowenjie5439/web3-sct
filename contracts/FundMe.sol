@@ -12,13 +12,13 @@ contract FundMe{
 
     mapping(address => uint256) public acctBals;
 
-    // 单笔fund最小值
-    uint256 SINGLE_MININUM_VALUE = 1 * 10 ** 18; // 1 USD
+    // 单笔fund最小值 (0.01 CFX)
+    uint256 SINGLE_MININUM_VALUE = 0.01 * 10 ** 18;
 
-    // 提现最小余额
-    uint256 WITHDRAW_MININUM_BALANCE = 5 * 10 ** 18; // 5 USD
+    // 提现最小余额 (0.1 CFX)
+    uint256 WITHDRAW_MININUM_BALANCE = 0.1 * 10 ** 18;
 
-    address owner;
+    address public owner;
 
     // 合约部署时间
     uint256 immutable private deployTime;
@@ -31,7 +31,7 @@ contract FundMe{
     
 
     constructor(uint256 duration){
-        dataFeed = AggregatorV3Interface(0x5147eA642CAEF7BD9c1265AadcA78f997AbB9649);
+        // dataFeed = AggregatorV3Interface(0x5147eA642CAEF7BD9c1265AadcA78f997AbB9649);
         owner = msg.sender;
         deployTime = block.timestamp;
         lockDuration = duration;
@@ -39,15 +39,15 @@ contract FundMe{
 
     // 投资
     function fund() external payable{
-        // 单次投资金额不能小于1USD
-        require(convertEthToUsd(msg.value) >= SINGLE_MININUM_VALUE, "need to more ETH");
+        // 单次投资金额不能小于最小值
+        require(msg.value >= SINGLE_MININUM_VALUE, "Funding amount too small");
         require(block.timestamp < deployTime + lockDuration, unicode"锁定期已经结束，无法充值");
         acctBals[msg.sender] += msg.value;
     }
 
     // 提现
     function withdrawl() external onlyOwner{
-        require(convertEthToUsd(address(this).balance) >= WITHDRAW_MININUM_BALANCE , unicode"提现金额不能小于5USD");
+        require(address(this).balance >= WITHDRAW_MININUM_BALANCE, "Balance too low to withdraw");
 
         bool success;
         (success, ) = payable(msg.sender).call{value: getBalance()}("");
@@ -64,7 +64,7 @@ contract FundMe{
     }
 
     function refund() external windowClosed{
-        require(convertEthToUsd(address(this).balance) < WITHDRAW_MININUM_BALANCE , unicode"金额已经到达目标值");
+        require(address(this).balance < WITHDRAW_MININUM_BALANCE, unicode"金额已经到达目标值");
         require(acctBals[msg.sender] > 0, unicode"未查询到充值记录");
         bool success;
         (success, ) = payable(msg.sender).call{value: acctBals[msg.sender]}("");

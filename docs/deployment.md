@@ -80,10 +80,69 @@ Hardhat toolbox 自带 Etherscan 配置，可在 `.env` 中新增 `ETHERSCAN_API
 npx hardhat verify --network sepolia <合约地址> "<构造参数>"
 ```
 
+## 自定义任务：与合约交互
+
+项目中实现了自定义 Hardhat Task `interact-fundme`，用于测试部署后的 FundMe 合约。
+
+### 创建步骤
+
+1. **定义任务** (`tasks/interact-fundme.ts`)：
+   ```typescript
+   import { task } from "hardhat/config";
+   import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
+
+   const interactFundMeTask = task(["interact-fundme"], "Interact with FundMe contract")
+       .addOption({
+           name: "addr",
+           description: "FundMe contract address",
+           defaultValue: "",
+       })
+       .setAction(async () => {
+           return {
+               default: async (taskArgs: { addr: string }, hre: HardhatRuntimeEnvironment) => {
+                   const { network } = hre;
+                   const connection = await network.connect();
+                   const { ethers } = connection;
+                   // ... 任务逻辑
+               }
+           };
+       })
+       .build();
+   
+   export default interactFundMeTask;
+   ```
+
+2. **注册任务** (`hardhat.config.ts`)：
+   ```typescript
+   import interactFundMeTask from "./tasks/interact-fundme.js";
+   
+   export default defineConfig({
+       tasks: [interactFundMeTask],
+       // ... 其他配置
+   });
+   ```
+
+### 使用方法
+
+```bash
+npx hardhat interact-fundme --network confluxESpace --addr 0x你的合约地址
+```
+
+- `--network`：指定合约所在网络（必须与部署时一致）
+- `--addr`：合约地址
+
+### Hardhat 3 Task API 特点
+
+- **任务 ID**：使用数组表示层级，如 `["interact-fundme"]` 或 `["verify", "etherscan"]`
+- **Lazy Loading**：`setAction()` 返回 `{ default: Function }` 支持延迟加载
+- **Builder 模式**：链式调用 `.addOption()` → `.setAction()` → `.build()`
+- **类型安全**：通过 TypeScript 类型参数推断任务参数类型
+
 ## 常见问题
 
 - **insufficient funds**：账户网络余额不足，需到对应 faucet 或桥接测试币。  
 - **链 ID 不匹配 (HHE708)**：RPC 指向的网络与配置 `chainId` 不一致，确认是否使用主网/测试网正确 RPC。  
 - **HHE80001 / 404**：`chainDescriptors` 的 `apiUrl` 必须包含 `/api` 后缀，例如 `https://evmapi-testnet.confluxscan.org/api`。  
 - **私钥格式错误 (HHE15)**：`CONFLUX_PRIVATE_KEY`、`SEPOLIA_PRIVATE_KEY` 必须是带 `0x` 的 64 位十六进制字符串。
+- **execution reverted**：合约调用失败，检查锁定期是否过期、价格源是否可用、金额是否满足最小值等。
 

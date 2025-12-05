@@ -12,7 +12,7 @@ const main = async () => {
     // 2. 部署合约
     console.log("正在部署合约...");
     // FundMe 的构造函数需要一个参数 (lockDuration)，这里假设为 100 秒
-    const fundMe = await fundMeFactory.deploy(100); 
+    const fundMe = await fundMeFactory.deploy(300); 
     
     // 3. 等待部署完成
     await fundMe.waitForDeployment();
